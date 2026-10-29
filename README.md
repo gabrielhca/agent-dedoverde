@@ -1,6 +1,6 @@
 # Dedo Verde (`agent-dedoverde`)
 
-**Controle autônomo de estufa inteligente via Aprendizagem por Reforço**
+**Controle autônomo de estufa inteligente via Aprendizagem por Reforço (DQN)**
 
 Projeto da disciplina GBC063 - Inteligência Artificial (Faculdade de Computação, Universidade Federal de Uberlândia), ministrada pelo Prof. Marcelo Keese Albertini.
 
@@ -10,22 +10,23 @@ O Dedo Verde modela o controle climático e de irrigação de uma estufa como um
 
 ## Modelagem (MDP)
 
-O problema é formulado para ser resolvido com a arquitetura Ator-Crítico e ações contínuas.
+O problema é formulado para ser resolvido com Deep Q-Network (DQN) e ações discretas.
 
 | Elemento | Definição |
 |---|---|
 | Ambiente | Estufa simulada com dinâmica estocástica (clima e chuva) |
-| Estado $s_t$ | Temperatura interna, umidade interna, nível do tanque, previsão de chuva, temperatura externa, hora do dia |
-| Ação $a_t$ | Vetor contínuo em $[0,1]^3$: irrigação, aquecimento, exaustão/ventilação |
-| Recompensa $r_t$ | Sem penalidade na faixa ideal; custo proporcional a energia e água (maior com o tanque baixo); penalidade terminal severa em extremos letais |
+| Estado $s_t$ | Temperatura interna, umidade interna, nível do tanque, previsão de chuva, temperatura externa, hora do dia (seno e cosseno) |
+| Ação $a_t$ | Irrigação, aquecimento e ventilação, cada um em {0%, 50%, 100%} (27 combinações) |
+| Recompensa $r_t$ | +1,0 por passo na faixa ideal; penalidade crescente fora dela; custo de energia e de água (maior com o tanque baixo); terminal letal de −100 |
+| Desconto $\gamma$ | 0,99 (horizonte efetivo de cerca de 100 passos) |
 
 O estado foi projetado para satisfazer a Hipótese de Markov. Detalhes e decisões em aberto estão em [`docs/project.md`](docs/project.md).
 
 ## Roadmap
 
-- [ ] Etapa 1 (atual): modelagem do MDP e apresentação em 3 slides
+- [ ] Etapa 1 (atual): definição do ambiente e agente
 - [ ] Etapa 2: implementação do simulador
-- [ ] Etapa 3: treinamento do agente (Ator-Crítico)
+- [ ] Etapa 3: treinamento do agente (DQN)
 
 ## Estrutura do Repositório
 

@@ -25,35 +25,48 @@
 | Nível do tanque | Torna a escassez de água visível ao agente |
 | Sinal de previsão de chuva | Resume o que o passado diz sobre a recarga futura |
 | Temperatura externa | Define a perda/ganho térmico |
-| Hora do dia (seno/cosseno) | Captura o ciclo diário; mantém a dinâmica estacionária |
+| Hora do dia (seno/cosseno) | Captura o ciclo diário; evita o salto entre 23h e 0h |
 
-### 2.3 Ações contínuas ($a_t \in [0,1]^3$, i.e. 0–100%)
+- Estado contínuo (7 valores numéricos): por isso a tabela Q não serve e usamos uma rede neural.
+
+### 2.3 Ações discretas ($a_t$)
+
+Cada atuador opera em três níveis: desligado (0%), médio (50%) ou máximo (100%). São 3 × 3 × 3 = 27 combinações.
 
 | Ação | Efeito | Custo |
 |---|---|---|
 | Irrigação | Sobe umidade, esvazia tanque | Água |
 | Aquecimento | Sobe temperatura | Energia |
-| Exaustão/Ventilação | Aproxima temperatura da externa | Energia |
+| Ventilação | Aproxima temperatura da externa (troca térmica) | Energia |
 
-- **Por que contínuas:** o Ator-Crítico gera a ação direto da política, sem `argmax` sobre Q a cada passo.
+- **Por que discretas:** o DQN escolhe a ação por `argmax` sobre Q, o que exige um conjunto finito de ações.
 
-### 2.4 Política de Recompensas ($r_t$) — diretrizes anti-Goodhart
+### 2.4 Política de Recompensas ($r_t$) — diretrizes anti-reward hacking
 
-- **Recompensar estabilidade:** zero de penalidade dentro da faixa ideal de temperatura e umidade; penalidade crescente fora dela.
-- **Penalizar energia:** custo proporcional à potência usada.
-- **Penalizar água:** custo proporcional ao uso, **maior quando o tanque está baixo**.
-- **Penalidade terminal severa:** extremos letais (morte da planta) encerram o episódio.
+| Componente | Valor |
+|---|---|
+| Manutenção na faixa ideal | +1,0 por passo |
+| Fora da faixa ideal | -0,2 a -2,0 (cresce com o afastamento) |
+| Gasto energético | -0,1 a -0,5 (proporcional ao nível acionado) |
+| Gasto hídrico | -0,1 a -1,5 (dinâmico: maior com o tanque baixo) |
+| Estado terminal letal | -100 e fim do episódio |
+
+- **Fator de desconto:** $\gamma = 0{,}99$, horizonte efetivo de cerca de 100 passos ($1/(1-\gamma)$).
 - **Guarda-corpos contra reward hacking:**
-  - penalidade terminal grande o bastante para que "morrer cedo" nunca compense;
+  - penalidade terminal maior que a soma descontada dos custos de sobrevivência, para que "morrer cedo" nunca compense (exige custo por passo normalizado, em torno de 1 ou menos);
   - zona ideal ampla, para o agente não colar na borda da faixa;
   - tanque no estado e na recompensa, para não esvaziá-lo por conforto imediato.
+- Os valores são ponto de partida e serão calibrados no simulador.
 
 ---
 
-## 3. Arquitetura do Agente
+## 3. Arquitetura do Agente (DQN)
 
-- **Ator** ($\pi_\theta$): política estocástica contínua que escolhe irrigação, aquecimento e ventilação a partir de $s_t$; atualizada pela **vantagem** (ações melhores que a média do estado ganham probabilidade).
-- **Crítico** ($\hat V(s;w)$): avalia a qualidade do estado atual (retorno esperado) e fornece o sinal de vantagem ao Ator (erro TD / GAE).
+- **Rede neural** $\hat Q(s,a;w)$: recebe o estado e devolve um valor Q para cada uma das 27 ações.
+- **Política:** $\epsilon$-gulosa sobre $\hat Q$ (argmax na maior parte das vezes, ação aleatória com probabilidade $\epsilon$).
+- **Alvo:** $y = r + \gamma \max_{a'} \hat Q(s',a';w^-)$ (ou $y = r$ se o episódio terminou).
+- **Repetição de experiência:** buffer de transições, treino com minibatches aleatórios.
+- **Rede-alvo:** cópia congelada dos pesos ($w^-$), sincronizada a cada $C$ passos.
 
 ---
 
@@ -63,12 +76,13 @@
 |---|---|---|
 | 1 | Estruturar os **3 slides** de apresentação do MDP | **Atual** |
 | 2 | Implementação do simulador | Futuro |
-| 3 | Treinamento do agente | Futuro |
+| 3 | Treinamento do agente (DQN) | Futuro |
 
 ---
 
 ## 5. Decisões em aberto
 
 - Faixas ideais/críticas (depende da cultura).
-- Pesos da recompensa e valor da penalidade terminal.
-- Fator de desconto $\gamma$ e duração do episódio.
+- Calibração dos pesos da recompensa e do valor da penalidade terminal.
+- Passo de tempo (sugestão: 1 hora) e duração do episódio (exemplo: 30 dias).
+- Hiperparâmetros do DQN: decaimento de $\epsilon$, tamanho do buffer, frequência $C$ da rede-alvo.
