@@ -4,69 +4,73 @@
 
 ## 1. Visão Geral
 
-- Controle autônomo de uma estufa inteligente (clima + irrigação) sob incerteza climática.
-- Água é o recurso escasso: tanque finito, recarregado só pela chuva.
+- Controle autônomo de uma estufa em **lugar inóspito**, que produz comida de verdade, sob incerteza climática.
+- **Dois canteiros**: **milho** (calorias; bebe muito, gosta de calor) e **feijão-caupi** (proteína; aguenta seca, não tolera encharcamento).
+- O ar é compartilhado: a temperatura precisa ser um meio-termo (as faixas ideais só se cruzam entre 24 e 28 °C).
+- Água é o recurso escasso: tanque único e finito, recarregado só pela chuva. Na seca, o agente faz **triagem** entre os canteiros.
 
 ---
 
 ## 2. Modelagem do MDP
 
 ### 2.1 Ambiente
-- Estufa **simulada**, passo de tempo discreto.
-- **Consequências adiadas:** gastar água hoje pode causar a morte da planta amanhã se não chover.
-- Fatores exógenos (fora do controle do agente): temperatura externa, ciclo diário, chuva.
+- Estufa **simulada**; 1 passo = 1 hora; episódio = 30 dias (720 passos), a fase de floração.
+- **Consequências adiadas:** gastar água hoje pode matar uma cultura amanhã se não chover.
+- Fatores exógenos (fora do controle do agente): temperatura externa, ciclo diário, **luz solar**, nuvens e chuva. Estiagens de vários dias surgem de um regime seco/úmido com persistência.
+- O sol aquece a estufa e seca o substrato; as nuvens fecham antes da chuva, a luz cai e a estufa esfria. Energia e água ficam amarradas.
 
-### 2.2 Estado Markoviano ($s_t$)
+### 2.2 Estado Markoviano ($s_t$) — 11 valores, normalizados em [−1, 1]
 
-| Variável | Papel na Hipótese de Markov |
-|---|---|
-| Temperatura interna | Estado físico a controlar |
-| Umidade interna | Estado físico a controlar |
-| Nível do tanque | Torna a escassez de água visível ao agente |
-| Sinal de previsão de chuva | Resume o que o passado diz sobre a recarga futura |
-| Temperatura externa | Define a perda/ganho térmico |
-| Hora do dia (seno/cosseno) | Captura o ciclo diário; evita o salto entre 23h e 0h |
+| Variável | Sensor | Papel na Hipótese de Markov |
+|---|---|---|
+| Temperatura interna | termômetro | Estado físico a controlar |
+| Umidade do substrato (por canteiro) | sensor de umidade do solo | Estado físico a controlar |
+| Nível do tanque | boia/ultrassônico | Torna a escassez de água visível |
+| Previsão de chuva (48 h) | serviço meteorológico | Resume a recarga futura (com ruído) |
+| Temperatura externa | termômetro externo | Define a perda/ganho térmico |
+| Luminosidade | piranômetro | Ganho térmico e evaporação |
+| Hora do dia (seno/cosseno) | relógio | Ciclo diário sem salto entre 23h e 0h |
+| Cultura viva/morta (por canteiro) | inspeção | Indica quais canteiros ainda contam |
 
-- Estado contínuo (7 valores numéricos): por isso a tabela Q não serve e usamos uma rede neural.
+- Morte instantânea ao passar do limite crítico: não há contador escondido de "horas sob estresse".
 
-### 2.3 Ações discretas ($a_t$)
+### 2.3 Ações discretas ($a_t$) — 36
 
-Cada atuador opera em três níveis: desligado (0%), médio (50%) ou máximo (100%). São 3 × 3 × 3 = 27 combinações.
+Irrigação liga/desliga em cada canteiro (2 × 2) × aquecimento {0, 50, 100%} × ventilação {0, 50, 100%}.
 
 | Ação | Efeito | Custo |
 |---|---|---|
-| Irrigação | Sobe umidade, esvazia tanque | Água |
-| Aquecimento | Sobe temperatura | Energia |
-| Ventilação | Aproxima temperatura da externa (troca térmica) | Energia |
+| Irrigação (por canteiro) | Sobe umidade do canteiro, esvazia tanque | Água |
+| Aquecimento (estufa toda) | Sobe temperatura | Energia |
+| Ventilação (estufa toda) | Aproxima temperatura da externa | Energia |
 
-- **Por que discretas:** o DQN escolhe a ação por `argmax` sobre Q, o que exige um conjunto finito de ações.
+- Com N culturas: 2ᴺ × 9 ações (3 culturas = 72; 4 = 144).
 
-### 2.4 Política de Recompensas ($r_t$) — diretrizes anti-reward hacking
+### 2.4 Política de Recompensas ($r_t$)
 
 | Componente | Valor |
 |---|---|
-| Manutenção na faixa ideal | +1,0 por passo |
-| Fora da faixa ideal | -0,2 a -2,0 (cresce com o afastamento) |
-| Gasto energético | -0,1 a -0,5 (proporcional ao nível acionado) |
-| Gasto hídrico | -0,1 a -1,5 (dinâmico: maior com o tanque baixo) |
-| Estado terminal letal | -100 e fim do episódio |
+| Cultura viva na faixa ideal | +0,5 por cultura (+1 com as duas) |
+| Cultura viva fora da faixa ideal | de +0,3 a 0, caindo até a borda crítica (nunca negativo) |
+| Gasto energético | −0,3 × aquecimento − 0,2 × ventilação (até −0,5) |
+| Gasto hídrico | −0,1 a −1,5 (dinâmico: maior com o tanque baixo) |
+| Morte de uma cultura | −100 por cultura; o episódio acaba quando as duas morrem |
 
-- **Fator de desconto:** $\gamma = 0{,}99$, horizonte efetivo de cerca de 100 passos ($1/(1-\gamma)$).
+- **Fator de desconto:** $\gamma = 0{,}99$ (horizonte ~100 passos ≈ 4 dias).
 - **Guarda-corpos contra reward hacking:**
-  - penalidade terminal maior que a soma descontada dos custos de sobrevivência, para que "morrer cedo" nunca compense (exige custo por passo normalizado, em torno de 1 ou menos);
-  - zona ideal ampla, para o agente não colar na borda da faixa;
-  - tanque no estado e na recompensa, para não esvaziá-lo por conforto imediato.
-- Os valores são ponto de partida e serão calibrados no simulador.
+  - cultura viva, mesmo sofrendo, nunca rende menos que morta, e cada morte custa −100: "deixar morrer para parar de pagar" nunca compensa;
+  - zona ideal ampla;
+  - tanque no estado e na recompensa;
+  - evaporação menor com substrato seco: economizar água é possível, ao custo de sair da faixa ideal.
 
 ---
 
 ## 3. Arquitetura do Agente (DQN)
 
-- **Rede neural** $\hat Q(s,a;w)$: recebe o estado e devolve um valor Q para cada uma das 27 ações.
-- **Política:** $\epsilon$-gulosa sobre $\hat Q$ (argmax na maior parte das vezes, ação aleatória com probabilidade $\epsilon$).
+- **Rede neural** $\hat Q(s,a;w)$: recebe o estado (11) e devolve um valor Q para cada uma das 36 ações.
+- **Política:** $\epsilon$-gulosa sobre $\hat Q$.
 - **Alvo:** $y = r + \gamma \max_{a'} \hat Q(s',a';w^-)$ (ou $y = r$ se o episódio terminou).
-- **Repetição de experiência:** buffer de transições, treino com minibatches aleatórios.
-- **Rede-alvo:** cópia congelada dos pesos ($w^-$), sincronizada a cada $C$ passos.
+- **Repetição de experiência** e **rede-alvo** sincronizada a cada $C$ passos.
 
 ---
 
@@ -74,15 +78,13 @@ Cada atuador opera em três níveis: desligado (0%), médio (50%) ou máximo (10
 
 | Passo | Entrega | Status |
 |---|---|---|
-| 1 | Estruturar os **3 slides** de apresentação do MDP | **Atual** |
-| 2 | Implementação do simulador | Futuro |
-| 3 | Treinamento do agente (DQN) | Futuro |
+| 1 | 3 slides do MDP | Feito |
+| 2 | Simulador + linhas de base (aleatória, termostato) | Feito (falta rodar no Colab) |
+| 3 | Treinamento do DQN e gráficos | **Atual** (12/11) |
 
 ---
 
 ## 5. Decisões em aberto
 
-- Faixas ideais/críticas (depende da cultura).
-- Calibração dos pesos da recompensa e do valor da penalidade terminal.
-- Passo de tempo (sugestão: 1 hora) e duração do episódio (exemplo: 30 dias).
 - Hiperparâmetros do DQN: decaimento de $\epsilon$, tamanho do buffer, frequência $C$ da rede-alvo.
+- Calibração fina dos custos se o DQN não superar o termostato.
