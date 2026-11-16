@@ -7,6 +7,7 @@ O resultado é um arquivo único, que abre direto no navegador.
 Uso (na raiz do repositório, depois de scripts/gerar_episodios.py):
     python scripts/montar_pagina.py
 """
+
 import json
 from pathlib import Path
 
@@ -22,10 +23,14 @@ def main():
     dados = ARQ_DADOS.read_text(encoding="utf-8").strip()
     json.loads(dados)  # só confere que o arquivo é um JSON válido
     if modelo.count(MARCADOR) != 1:
-        raise SystemExit(f"esperava o marcador {MARCADOR} uma única vez em {ARQ_MODELO.name}")
+        raise SystemExit(
+            f"esperava o marcador {MARCADOR} uma única vez em {ARQ_MODELO.name}"
+        )
     ARQ_SAIDA.parent.mkdir(parents=True, exist_ok=True)
     ARQ_SAIDA.write_text(modelo.replace(MARCADOR, dados), encoding="utf-8")
-    print(f"gravado: {ARQ_SAIDA.relative_to(RAIZ)} ({ARQ_SAIDA.stat().st_size / 1024:.0f} KB)")
+    print(
+        f"gravado: {ARQ_SAIDA.relative_to(RAIZ)} ({ARQ_SAIDA.stat().st_size / 1024:.0f} KB)"
+    )
 
 
 if __name__ == "__main__":

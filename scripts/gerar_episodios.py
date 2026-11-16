@@ -7,11 +7,11 @@ tudo em resultados/episodios/episodio_1.json. Para o DQN, guarda também os
 Uso (na raiz do repositório, em CPU):
     python scripts/gerar_episodios.py
 """
+
 import json
 import sys
 from pathlib import Path
 
-import numpy as np
 import torch
 from stable_baselines3 import DQN
 
@@ -24,8 +24,25 @@ SEED_SECA = 1  # a mesma semente da seção 10 do notebook 02_dqn
 ARQ_MODELO = RAIZ / "resultados" / "1000k_s4242" / "dqn_final.zip"
 ARQ_SAIDA = RAIZ / "resultados" / "episodios" / f"episodio_{SEED_SECA}.json"
 
-COLS = ["t", "T_in", "T_ext", "M_milho", "M_caupi", "tanque", "viva_milho", "viva_caupi",
-        "sol", "chuva", "prev", "irr_milho", "irr_caupi", "aquec", "vent", "r", "G"]
+COLS = [
+    "t",
+    "T_in",
+    "T_ext",
+    "M_milho",
+    "M_caupi",
+    "tanque",
+    "viva_milho",
+    "viva_caupi",
+    "sol",
+    "chuva",
+    "prev",
+    "irr_milho",
+    "irr_caupi",
+    "aquec",
+    "vent",
+    "r",
+    "G",
+]
 
 
 def rodar_episodio(env, politica, modelo=None):
@@ -42,21 +59,41 @@ def rodar_episodio(env, politica, modelo=None):
         if modelo is not None:
             with torch.no_grad():
                 q = modelo.q_net(torch.as_tensor(obs).unsqueeze(0)).squeeze(0)
-            assert int(q.argmax()) == a, f"t={info['t']}: argmax Q = {int(q.argmax())}, predict = {a}"
+            assert int(q.argmax()) == a, (
+                f"t={info['t']}: argmax Q = {int(q.argmax())}, predict = {a}"
+            )
             qs.append([round(float(x), 3) for x in q])
         obs, r, term, trunc, info = env.step(a)
         G += r
         done = term or trunc
         irr, aquec, vent = env.decodificar(a)
-        linhas.append([
-            info["t"], round(info["T_in"], 2), round(info["T_ext"], 2),
-            round(float(info["M"][0]), 2), round(float(info["M"][1]), 2), round(info["tanque"], 1),
-            int(info["viva"][0]), int(info["viva"][1]),
-            round(info["sol"], 3), round(info["chuva"], 2), round(float(info["prev"]), 3),
-            irr[0], irr[1], aquec, vent, round(r, 4), round(G, 3),
-        ])
+        linhas.append(
+            [
+                info["t"],
+                round(info["T_in"], 2),
+                round(info["T_ext"], 2),
+                round(float(info["M"][0]), 2),
+                round(float(info["M"][1]), 2),
+                round(info["tanque"], 1),
+                int(info["viva"][0]),
+                int(info["viva"][1]),
+                round(info["sol"], 3),
+                round(info["chuva"], 2),
+                round(float(info["prev"]), 3),
+                irr[0],
+                irr[1],
+                aquec,
+                vent,
+                round(r, 4),
+                round(G, 3),
+            ]
+        )
         mortes += [f"{nome} no dia {info['t'] / 24:.1f}" for nome in info["mortes"]]
-    return linhas, (qs if modelo is not None else None), dict(retorno=G, agua=info["agua_gasta"], mortes=mortes)
+    return (
+        linhas,
+        (qs if modelo is not None else None),
+        dict(retorno=G, agua=info["agua_gasta"], mortes=mortes),
+    )
 
 
 def main():
@@ -67,26 +104,44 @@ def main():
         return int(modelo.predict(obs, deterministic=True)[0])
 
     politicas = [
-        ("Termostato",
-         "Regra fixa: mira 26 °C e rega quando a umidade chega perto do limite de baixo da faixa ideal. "
-         "Não olha o tanque nem a previsão.",
-         politica_termostato, None),
-        ("DQN",
-         "Modelo do fim do treino (1 milhão de passos). Escolhe sempre a ação de maior Q.",
-         politica_dqn, modelo),
+        (
+            "Termostato",
+            (
+                "Regra fixa: mira 26 °C e rega quando a umidade chega perto do limite de baixo da faixa ideal. "
+                "Não olha o tanque nem a previsão."
+            ),
+            politica_termostato,
+            None,
+        ),
+        (
+            "DQN",
+            "Modelo do fim do treino (1 milhão de passos). Escolhe sempre a ação de maior Q.",
+            politica_dqn,
+            modelo,
+        ),
     ]
 
     eps = []
     for nome, desc, politica, mod in politicas:
         linhas, qs, res = rodar_episodio(env, politica, mod)
         eps.append(dict(nome=nome, desc=desc, h=linhas, q=qs))
-        print(f"{nome}: retorno {res['retorno']:.1f} | água {res['agua']:.0f} L | "
-              f"{len(linhas)} horas | mortes: {', '.join(res['mortes']) or 'nenhuma'}")
+        print(
+            f"{nome}: retorno {res['retorno']:.1f} | água {res['agua']:.0f} L | "
+            f"{len(linhas)} horas | mortes: {', '.join(res['mortes']) or 'nenhuma'}"
+        )
 
     dados = dict(
         episodio=SEED_SECA,
-        culturas=[dict(nome=k["nome"], T_ideal=list(k["T_ideal"]), T_crit=list(k["T_crit"]),
-                       M_ideal=list(k["M_ideal"]), M_crit=list(k["M_crit"])) for k in env.culturas],
+        culturas=[
+            dict(
+                nome=k["nome"],
+                T_ideal=list(k["T_ideal"]),
+                T_crit=list(k["T_crit"]),
+                M_ideal=list(k["M_ideal"]),
+                M_crit=list(k["M_crit"]),
+            )
+            for k in env.culturas
+        ],
         cols=COLS,
         eps=eps,
     )
