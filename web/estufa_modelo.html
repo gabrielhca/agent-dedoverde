@@ -60,7 +60,7 @@ button:focus-visible,input:focus-visible,.file:focus-within{outline:3px solid va
 <body>
 <div class="band">
   <h1>Uma seca de 21 dias, hora por hora</h1>
-  <p class="sub">Episódio 1 do teste: chove perto do dia 3 e só volta a chover no dia 23.</p>
+  <p class="sub">Episódio 1 do teste: chove perto do dia 3 e só volta a chover no dia 24.</p>
   <div class="eps" id="eps" role="group" aria-label="Política"></div>
 
   <div class="grid">
@@ -204,7 +204,7 @@ function legenda() {
 
 function rotulo(a) {
   const irr = [(Math.floor(a / 9)) & 1, (Math.floor(a / 9) >> 1) & 1], aq = Math.floor((a % 9) / 3), ve = a % 3;
-  const r = irr[0] && irr[1] ? "rega os dois" : irr[0] ? "rega milho" : irr[1] ? "rega caupi" : "não rega";
+  const r = irr[0] && irr[1] ? "rega os dois" : irr[0] ? "rega milho" : irr[1] ? "rega feijão" : "não rega";
   return `${r} · aq ${["0", "50", "100"][aq]} · vent ${["0", "50", "100"][ve]}`;
 }
 
