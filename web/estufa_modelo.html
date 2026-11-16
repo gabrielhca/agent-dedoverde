@@ -18,14 +18,14 @@
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Source Sans 3",system-ui,sans-serif;overflow-x:clip}
 h1,h2{font-family:Outfit,system-ui,sans-serif;line-height:1.05;margin:0;text-wrap:balance}
 h1{font-size:clamp(28px,4vw,40px)}h2{font-size:20px;margin-bottom:8px}
-.band{padding:clamp(20px,3vw,40px) max(4vw,16px);max-width:1240px;margin:0 auto}
+.band{padding:clamp(20px,3vw,40px) max(3vw,16px);max-width:1480px;margin:0 auto}
 .sub{color:var(--mut);margin:6px 0 0;max-width:70ch}
 .eps{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
 button,.file{font:600 15px "Source Sans 3",sans-serif;min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
 button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 button:focus-visible,input:focus-visible,.file:focus-within{outline:3px solid var(--agua);outline-offset:2px}
 .file{display:inline-flex;align-items:center;gap:6px}.file input{position:absolute;opacity:0;width:1px;height:1px}
-.grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:20px;margin-top:18px}
+.grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:20px;margin-top:18px}
 @media(max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
 .scene{border-radius:16px;overflow:hidden;border:1px solid var(--line);background:#9fd3f0}
 .scene svg{display:block;width:100%;height:auto}
@@ -41,11 +41,12 @@ button:focus-visible,input:focus-visible,.file:focus-within{outline:3px solid va
 .nums div{font-size:13px;color:var(--mut)}.nums strong{display:block;font:700 22px Outfit,sans-serif;color:var(--ink);white-space:nowrap}
 .ctrl{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:16px}
 .ctrl input[type=range]{flex:1 1 220px;height:44px;accent-color:var(--agua)}
+.figtit{font:600 16px Outfit,system-ui,sans-serif;margin:18px 0 0}
 .fig{position:relative;height:150px;margin-top:8px;cursor:pointer}.fig>svg{position:absolute;inset:0;width:100%;height:100%}
 .leg{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:14px;color:var(--mut);margin-top:10px}
 .leg span{display:inline-flex;align-items:center;gap:6px}.sw{width:14px;height:14px;border-radius:3px;display:inline-block}
 .q{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
-.qrow{display:grid;grid-template-columns:minmax(0,10em) minmax(0,1fr) 3.5em;gap:8px;align-items:center;font-size:14px;margin:4px 0}
+.qrow{display:grid;grid-template-columns:minmax(0,13em) minmax(0,1fr) 3.5em;gap:8px;align-items:center;font-size:14px;margin:4px 0}
 .qbar{height:12px;border-radius:6px;background:var(--line)}.qbar i{display:block;height:100%;border-radius:6px;background:var(--mut)}
 .qrow.best .qbar i{background:var(--agua)}.qrow.best{font-weight:600}
 .qrow span:last-child{text-align:right;font-variant-numeric:tabular-nums}
@@ -59,7 +60,7 @@ button:focus-visible,input:focus-visible,.file:focus-within{outline:3px solid va
 <body>
 <div class="band">
   <h1>Uma seca de 21 dias, hora por hora</h1>
-  <p class="sub">Episódio 1 do teste: chove perto do dia 3 e só volta a chover no dia 23,5. Escolha a política e aperte play. A legenda explica o que acontece em cada hora.</p>
+  <p class="sub">Episódio 1 do teste: chove perto do dia 3 e só volta a chover no dia 23.</p>
   <div class="eps" id="eps" role="group" aria-label="Política"></div>
 
   <div class="grid">
@@ -75,6 +76,7 @@ button:focus-visible,input:focus-visible,.file:focus-within{outline:3px solid va
         <button id="vel">Velocidade 1×</button>
         <input type="range" id="slider" min="0" max="0" value="0" aria-label="Hora do episódio">
       </div>
+      <h2 class="figtit">O episódio inteiro: tanque, umidade e chuva</h2>
       <div class="fig" id="fig" title="Clique para pular para esse momento"><svg id="linha"></svg></div>
       <div class="leg">
         <span><i class="sw" style="background:#2f6fb3;opacity:.3"></i>tanque</span>
