@@ -78,8 +78,6 @@ O DQN aprendeu (saiu do nível da política aleatória), mas não superou o term
 
 ## O que aprendi
 
-> Rascunho para revisar.
-
 - Modelar um problema como MDP muda tudo o que vem depois. Na primeira versão, uma planta viva mas fora da faixa rendia menos que uma planta morta, então o agente podia "preferir" deixá-la morrer. Tive que repensar a recompensa para que viver sempre valesse mais.
 - O estado precisa ter tudo o que o agente usa para decidir. Um contador de "horas sob estresse" escondido quebraria a hipótese de Markov, por isso a morte é instantânea.
 - Treinar um DQN não garante resultado melhor que uma regra simples. O termostato continuou ganhando, e entender o porquê foi tão importante quanto treinar.
